@@ -3,14 +3,12 @@ use std::io::Read;
 pub struct LazyReader {
     source: Box<dyn Read>,
     buf: Box<Vec<u8>>,
-    size: usize,
 }
 
 impl LazyReader {
     pub fn new(source: Box<impl Read + 'static>, size: usize) -> Self <> {
         Self {
             source,
-            size,
             buf: Box::new((0..size).into_iter().map(|_| 0).collect()),
         }
     }

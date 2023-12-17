@@ -4,14 +4,12 @@ use crate::lazy_reader::LazyReader;
 #[derive(Debug)]
 pub enum Token {
     String(String),
-    Number(String),
     LArrow,
     RArrow,
     Dot,
     FSlash,
     Eq,
     Quote,
-    Invalid,
 }
 
 pub struct Lexer {
@@ -52,9 +50,10 @@ impl Lexer {
                     tokens.push(Token::Quote);
                     self.consume();
                 }
-                // b'0'..=b'9' => {
-                //     tokens.push(Token::Number(self.consume_str()));
-                // }
+                b'.' => {
+                    tokens.push(Token::Dot);
+                    self.consume();
+                }
                 b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' => {
                     tokens.push(Token::String(self.consume_str()));
                 }
@@ -79,18 +78,6 @@ impl Lexer {
         }
         String::from_utf8(tmp_str).expect("must be a valid string")
     }
-
-    // fn consume_number(&mut self) -> String {
-    //     let mut tmp_str = Vec::new();
-    //
-    //     while let Some(ch) = self.peak() {
-    //         if ch.is_ascii_digit() {
-    //             tmp_str.push(ch);
-    //             self.consume();
-    //         } else { break; }
-    //     }
-    //     String::from_utf8(tmp_str).expect("must be a valid numeric string")
-    // }
 
     fn peak(&mut self) -> Option<u8> {
         if self.buf.len() == 0 {

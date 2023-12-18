@@ -8,7 +8,7 @@ use std::fs::File;
 use crate::lexer::Token;
 
 fn main() {
-    let Ok(file) = File::open("./files/test1.xml") else {
+    let Ok(file) = File::open("./files/test2.xml") else {
         panic!("fail to open the file");
     };
     let lr = LazyReader::new(Box::new(file), 32);
@@ -71,17 +71,35 @@ impl Parser {
             text: None,
         };
 
-        if self.next_tok == Token::FSlash {
-            self.next();
-            if self.next_tok != Token::RArrow {
-                panic!("expected closing '>'")
-            }
+        self.next();
+        if self.cur_tok == Token::FSlash && self.next_tok != Token::LArrow {
             self.next();
             self.next();
             return Some(node);
         }
 
-        self.next();
+        if self.cur_tok == Token::RArrow {
+            self.next();
+
+            // embedded node
+            if self.cur_tok == Token::LArrow {
+                if let Some(internal_node) = self.parse_node() {
+                    node.node.push(internal_node);
+                } else { panic!("expected opening '<'") }
+            }
+
+            // inner text
+            if let Token::String(inner_text) = self.cur_tok.to_owned() {
+                node.text = Some(inner_text);
+                self.next();
+                self.parse_closing_block(&node.name);
+                return Some(node);
+            }
+        }
+
+        if self.parse_closing_block(&node.name) {
+            return Some(node);
+        }
 
         while let Some(attr) = self.parse_attr() {
             node.attr.push(attr);
@@ -96,8 +114,28 @@ impl Parser {
         Some(node)
     }
 
+    fn parse_closing_block(&mut self, name: &str) -> bool {
+        if self.cur_tok != Token::LArrow && self.next_tok != Token::FSlash {
+            return false;
+        }
+        self.next();
+        self.next();
+        if let Token::String(block_name) = self.cur_tok.to_owned() {
+            if block_name != name {
+                panic!("expected closing block name '</block_name>' must match the opening one '<block_name>'")
+            }
+        }
+        self.next();
+        if self.cur_tok != Token::RArrow {
+            panic!("expected closing '/>'")
+        }
+        self.next();
+
+        return true;
+    }
+
     fn parse_attr(&mut self) -> Option<Attr> {
-        let Token::String(key) = self.cur_tok.to_owned() else { return None };
+        let Token::String(key) = self.cur_tok.to_owned() else { return None; };
         self.next();
 
         if self.cur_tok != Token::Eq {

@@ -1,7 +1,7 @@
 use std::str::from_utf8;
 use crate::lazy_reader::LazyReader;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Token {
     String(String),
     LArrow,
@@ -10,6 +10,7 @@ pub enum Token {
     FSlash,
     Eq,
     Quote,
+    EOF,
 }
 
 pub struct Lexer {
@@ -25,6 +26,7 @@ impl Lexer {
 
     pub fn parse(&mut self) -> Vec<Token> {
         let mut tokens = Vec::new();
+
         while let Some(ch) = self.peak() {
             match ch {
                 b' ' | b'\n' | b'\t' => {
@@ -64,6 +66,7 @@ impl Lexer {
             }
         }
 
+        tokens.push(Token::EOF);
         tokens
     }
 

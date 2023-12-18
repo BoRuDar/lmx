@@ -8,7 +8,7 @@ use std::fs::File;
 use crate::lexer::Token;
 
 fn main() {
-    let Ok(file) = File::open("./files/test2.xml") else {
+    let Ok(file) = File::open("./files/test3.xml") else {
         panic!("fail to open the file");
     };
     let lr = LazyReader::new(Box::new(file), 32);

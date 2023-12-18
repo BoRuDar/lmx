@@ -7,9 +7,8 @@ pub enum Token {
     OpenNode(String),
     Quote(String),
     CloseNodeNamed(String),
+    CloseNode,
     EndOfOpenNode,
-    Dot,
-    FSlash,
     Eq,
     EOF,
 }
@@ -42,6 +41,17 @@ impl Lexer {
                             self.consume();
                         } else {
                             tokens.push(Token::OpenNode(self.consume_str()));
+                        }
+                    }
+                }
+                b'/' => {
+                    self.consume();
+                    if let Some(next) = self.peak() {
+                        if next == b'>' {
+                            tokens.push(Token::CloseNode);
+                            self.consume();
+                        } else {
+                            panic!("invalid syntax")
                         }
                     }
                 }

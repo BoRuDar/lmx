@@ -4,12 +4,13 @@ use crate::lazy_reader::LazyReader;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Token {
     String(String),
-    LArrow,
-    RArrow,
+    OpenNode(String),
+    Quote(String),
+    CloseNodeNamed(String),
+    EndOfOpenNode,
     Dot,
     FSlash,
     Eq,
-    Quote,
     EOF,
 }
 
@@ -33,15 +34,19 @@ impl Lexer {
                     self.consume();
                 }
                 b'<' => {
-                    tokens.push(Token::LArrow);
                     self.consume();
+                    if let Some(next) = self.peak() {
+                        if next == b'/' {
+                            self.consume();
+                            tokens.push(Token::CloseNodeNamed(self.consume_str()));
+                            self.consume();
+                        } else {
+                            tokens.push(Token::OpenNode(self.consume_str()));
+                        }
+                    }
                 }
                 b'>' => {
-                    tokens.push(Token::RArrow);
-                    self.consume();
-                }
-                b'/' => {
-                    tokens.push(Token::FSlash);
+                    tokens.push(Token::EndOfOpenNode);
                     self.consume();
                 }
                 b'=' => {
@@ -49,14 +54,9 @@ impl Lexer {
                     self.consume();
                 }
                 b'"' => {
-                    tokens.push(Token::Quote);
-                    self.consume();
+                    tokens.push(Token::Quote(self.consume_quote()));
                 }
-                b'.' => {
-                    tokens.push(Token::Dot);
-                    self.consume();
-                }
-                b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' => {
+                c if c.is_ascii_alphanumeric() => {
                     tokens.push(Token::String(self.consume_str()));
                 }
                 _ => {
@@ -79,6 +79,22 @@ impl Lexer {
                 self.consume();
             } else { break; }
         }
+        String::from_utf8(tmp_str).expect("must be a valid string")
+    }
+
+    fn consume_quote(&mut self) -> String {
+        self.consume();
+        let mut tmp_str = Vec::new();
+
+        while let Some(ch) = self.peak() {
+            if ch == b'"' {
+                self.consume();
+                break;
+            }
+            tmp_str.push(ch);
+            self.consume();
+        }
+
         String::from_utf8(tmp_str).expect("must be a valid string")
     }
 
@@ -108,5 +124,22 @@ impl Lexer {
             Some(ch);
         }
         None
+    }
+}
+
+
+mod tests {
+    use std::fs::File;
+    use std::io::Cursor;
+    use crate::lazy_reader::LazyReader;
+    use crate::lexer::Lexer;
+
+    #[test]
+    fn test1() {
+        let Ok(file) = File::open("./files/test3.xml") else {
+            panic!("fail to open the file");
+        };
+        let mut lex = Lexer::new(LazyReader::new(Box::new(file), 24));
+        dbg!(lex.parse());
     }
 }

@@ -32,10 +32,6 @@ impl Parser {
         Some(Self { cur_tok, next_tok, tokens })
     }
 
-    fn look_ahead(&self) -> &Token {
-        &self.next_tok
-    }
-
     fn next(&mut self) -> Option<Token> {
         let ret = self.cur_tok.to_owned();
         self.cur_tok = self.next_tok.to_owned();
@@ -62,30 +58,42 @@ impl Parser {
     }
 
     fn parse_node(&mut self) -> Option<Node> {
-        self.next();
-        let Token::String(node_name) = self.cur_tok.to_owned() else { panic!("expected string!") };
-        let mut node = Node {
-            name: node_name,
-            attr: vec![],
-            node: vec![],
-            text: None,
-        };
+        if self.cur_tok != Token::LArrow {
+            return None; // return from recursive call
+        }
+
+        if self.cur_tok == Token::LArrow && self.next_tok == Token::FSlash {
+            // reached  the end of the outer node at </node_name>
+            return None; // return from recursive call
+        }
 
         self.next();
-        if self.cur_tok == Token::FSlash && self.next_tok != Token::LArrow {
+        let Token::String(node_name) = self.cur_tok.to_owned() else { panic!("expected string!") };
+        self.next();
+
+        let mut node = Node { name: node_name, attr: vec![], node: vec![], text: None };
+
+        // parse attributes if any
+        while let Some(attr) = self.parse_attr() {
+            node.attr.push(attr);
+        }
+
+        // short block with like <block />
+        if self.cur_tok == Token::FSlash && self.next_tok == Token::RArrow {
             self.next();
             self.next();
             return Some(node);
         }
 
+        // end of opening block at '>'
         if self.cur_tok == Token::RArrow {
             self.next();
 
             // embedded node
             if self.cur_tok == Token::LArrow {
-                if let Some(internal_node) = self.parse_node() {
+                while let Some(internal_node) = self.parse_node() {
                     node.node.push(internal_node);
-                } else { panic!("expected opening '<'") }
+                }
             }
 
             // inner text
@@ -97,12 +105,9 @@ impl Parser {
             }
         }
 
+
         if self.parse_closing_block(&node.name) {
             return Some(node);
-        }
-
-        while let Some(attr) = self.parse_attr() {
-            node.attr.push(attr);
         }
 
         if self.cur_tok != Token::FSlash || self.next_tok != Token::RArrow {
@@ -127,7 +132,7 @@ impl Parser {
         }
         self.next();
         if self.cur_tok != Token::RArrow {
-            panic!("expected closing '/>'")
+            panic!("expected closing '>' after the block's name")
         }
         self.next();
 

@@ -4,6 +4,7 @@ mod lazy_reader;
 mod lexer;
 mod parser;
 
+use std::fmt::format;
 use std::fs::File;
 use clap::Parser;
 use lazy_reader::LazyReader;
@@ -30,25 +31,7 @@ fn main() {
     let lr = LazyReader::new(Box::new(file), 32);
     let Some(mut p) = parser::Parser::new(Lexer::new(lr).parse().as_slice()) else { panic!("todo") };
 
-    println!("{}", &args.query);
-    search(&p.parse().nodes, &Query::from(&args.query).path, 0)
-}
-
-
-fn search(nodes: &[Node], path: &[QueryItem], depth: usize) {
-    for n in nodes {
-        if depth < path.len() {
-            if n.name != path[depth].title {
-                continue;
-            }
-            search(&n.nodes, &path, depth + 1);
-        }
-        if depth == path.len() - 1 {
-            if let Some(t) = &n.text {
-                println!("{t}");
-            }
-        }
-    }
+    Query::from(&args.query).search(&p.parse().nodes, 0);
 }
 
 impl Query {
@@ -56,15 +39,37 @@ impl Query {
         let v: Vec<_> = q
             .split(">")
             .map(|n| {
-                if let Some((title, params)) = n.split_once(":") {
-                    QueryItem { title: title.to_string(), text: true }
+                if let Some((title, param)) = n.split_once(":") {
+                    if param.contains("text") {
+                        QueryItem { title: title.to_string(), text: true, attr_key: None }
+                    } else {
+                        let attr_name = param.strip_prefix("attr[")
+                            .and_then(|a| a.strip_suffix("]"))
+                            .expect(&*format!("expected: 'attr[attr_name]' but got: {}", &param));
+                        QueryItem { title: title.to_string(), text: false, attr_key: Some(attr_name.to_string()) }
+                    }
                 } else {
-                    QueryItem { title: n.to_string(), text: false }
+                    QueryItem { title: n.to_string(), text: false, attr_key: None }
                 }
             })
             .collect();
 
         Self { path: v }
+    }
+
+    pub fn search(&self, nodes: &[Node], depth: usize) {
+        for n in nodes {
+            if depth < self.path.len() {
+                if n.name != self.path[depth].title {
+                    continue;
+                }
+                self.search(&n.nodes, depth + 1);
+            }
+
+            if depth == self.path.len() - 1 {
+                self.path[depth].print_node_if_match(n);
+            }
+        }
     }
 }
 
@@ -76,5 +81,34 @@ struct Query {
 #[derive(Debug)]
 struct QueryItem {
     title: String,
+    attr_key: Option<String>,
     text: bool,
+}
+
+impl QueryItem {
+    pub fn print_node_if_match(&self, n: &Node) {
+        if !self.title.eq(&n.name) {
+            return;
+        }
+
+        if self.text {
+            if let Some(t) = &n.text {
+                println!("{t}");
+            } else {
+                println!();
+            }
+            return;
+        }
+
+        if let Some(key) = &self.attr_key {
+            for a in &n.attr {
+                if a.key.eq(key) {
+                    println!("{}", a.val);
+                    return;
+                }
+            }
+        }
+
+        println!("{}", n.name);
+    }
 }

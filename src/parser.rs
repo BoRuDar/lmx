@@ -16,8 +16,8 @@ pub struct Node {
 
 #[allow(dead_code)]
 pub struct Attr {
-    key: String,
-    val: String,
+    pub key: String,
+    pub val: String,
 }
 
 pub struct Parser {

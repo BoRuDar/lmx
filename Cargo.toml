@@ -1,6 +1,6 @@
 [package]
 name = "lmx"
-description = "Toy tool for quering values of XML file."
+description = "Toy tool for quering values of an XML file."
 authors = ["Bogdan Daragan"]
 version = "0.1.0"
 edition = "2021"

@@ -136,19 +136,3 @@ impl Lexer {
         None
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use std::fs::File;
-    use crate::lazy_reader::LazyReader;
-    use crate::lexer::Lexer;
-
-    #[test]
-    fn test1() {
-        let Ok(file) = File::open("./files/test3.xml") else {
-            panic!("fail to open the file");
-        };
-        let mut lex = Lexer::new(LazyReader::new(Box::new(file), 24));
-        dbg!(lex.parse());
-    }
-}

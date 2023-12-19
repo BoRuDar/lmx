@@ -4,6 +4,7 @@ mod lazy_reader;
 mod lexer;
 mod parser;
 mod query;
+mod parts;
 
 use std::fs::File;
 use clap::Parser;
@@ -29,10 +30,14 @@ fn main() {
     let Ok(file) = File::open(&args.filename) else {
         panic!("fail to open the file");
     };
+
     let lr = LazyReader::new(Box::new(file), 32);
+
     let Some(mut p) = parser::Parser::new(Lexer::new(lr).parse().as_slice()) else {
         panic!("parser init failed")
     };
 
-    query::Query::from(&args.query).search(&p.parse().nodes, 0);
+    let doc = p.parse();
+
+    query::Query::from(&args.query).search(&doc.nodes, 0);
 }

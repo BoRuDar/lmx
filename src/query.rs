@@ -1,4 +1,4 @@
-use crate::parser::Node;
+use crate::parts::Node;
 
 #[derive(Debug)]
 pub(crate) struct Query {
@@ -11,7 +11,6 @@ struct QueryItem {
     attr_key: Option<String>,
     text: bool,
 }
-
 
 impl Query {
     pub fn from(q: &str) -> Self {
@@ -76,6 +75,6 @@ impl QueryItem {
             }
         }
 
-        println!("{}", n.name);
+        print!("{}", n);
     }
 }

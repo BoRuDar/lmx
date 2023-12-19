@@ -1,24 +1,6 @@
-use std::collections::VecDeque;
-use std::fmt::{Formatter};
+use std::{collections::VecDeque, fmt::Formatter};
 use crate::lexer::Token;
-
-pub struct Document {
-    pub nodes: Vec<Node>,
-}
-
-#[derive(Default)]
-pub struct Node {
-    pub name: String,
-    pub attr: Vec<Attr>,
-    pub text: Option<String>,
-    pub nodes: Vec<Node>,
-}
-
-#[allow(dead_code)]
-pub struct Attr {
-    pub key: String,
-    pub val: String,
-}
+use crate::parts::{Attr, Document, Node};
 
 pub struct Parser {
     tokens: VecDeque<Token>,
@@ -27,14 +9,14 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub(crate) fn new(tokens: &[Token]) -> Option<Self> {
+    pub fn new(tokens: &[Token]) -> Option<Self> {
         let mut tokens = VecDeque::from(tokens.to_vec());
         let cur_tok = tokens.pop_front()?;
         let next_tok = tokens.pop_front()?;
         Some(Self { cur_tok, next_tok, tokens })
     }
 
-    fn next(&mut self) -> Option<Token> {
+    fn move_to_next(&mut self) -> Option<Token> {
         let ret = self.cur_tok.to_owned();
         self.cur_tok = self.next_tok.to_owned();
         self.next_tok = self.tokens.pop_front()?;
@@ -42,7 +24,7 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Document {
-        let mut doc = Document { nodes: Vec::new() };
+        let mut doc = Document::default();
 
         loop {
             match &self.cur_tok {
@@ -52,9 +34,7 @@ impl Parser {
                         doc.nodes.push(n);
                     }
                 }
-                t => {
-                    panic!("not implemented for {t:?}");
-                }
+                t => panic!("unexpected token: {t:?}")
             }
         }
 
@@ -62,7 +42,7 @@ impl Parser {
     }
 
     fn parse_node(&mut self, node_name: String) -> Option<Node> {
-        self.next();
+        self.move_to_next();
         let mut node = Node { name: node_name, ..Node::default() };
 
         // parse attributes if any
@@ -73,14 +53,14 @@ impl Parser {
         loop {
             match self.cur_tok.to_owned() {
                 Token::CloseNode => {
-                    self.next();
+                    self.move_to_next();
                     return Some(node);
                 }
                 Token::CloseNodeNamed(name) => {
                     if node.name != name {
                         panic!("open<{}> and close<{name}> blocks don't match", node.name);
                     }
-                    self.next();
+                    self.move_to_next();
                     return Some(node);
                 }
                 Token::OpenNode(embedded_node_name) => {
@@ -89,16 +69,16 @@ impl Parser {
                     }
                 }
                 Token::EndOfOpenNode => {
-                    self.next();
+                    self.move_to_next();
                 }
                 Token::String(inner_text) => {
                     let mut tmp_str = Vec::new();
                     tmp_str.push(inner_text);
-                    self.next();
+                    self.move_to_next();
 
                     while let Token::String(s) = self.cur_tok.to_owned() {
                         tmp_str.push(s);
-                        self.next();
+                        self.move_to_next();
                     }
                     node.text = Some(tmp_str.join(" "));
                 }
@@ -111,15 +91,13 @@ impl Parser {
 
     fn parse_attr(&mut self) -> Option<Attr> {
         let Token::String(key) = self.cur_tok.to_owned() else { return None; };
-        self.next();
+        self.move_to_next();
 
-        if self.cur_tok != Token::Eq {
-            panic!("must be '='")
-        }
-        self.next();
+        if self.cur_tok != Token::Eq { panic!("must be '=' in 'attr=\"val\"") }
+        self.move_to_next();
 
         let Token::Quote(val) = self.cur_tok.to_owned() else { panic!("attr val must be a quoted string") };
-        self.next();
+        self.move_to_next();
 
         Some(Attr { key, val })
     }
@@ -143,10 +121,11 @@ impl std::fmt::Display for Node {
 
         if let Some(text) = &self.text {
             s = format!("{}{}", s, text);
-        }
-
-        for n in &self.nodes {
-            s = format!("{}\n{}", s, n);
+        } else {
+            s = format!("{}\n", s);
+            for n in &self.nodes {
+                s = format!("{}{}", s, n);
+            }
         }
 
         write!(f, "{}</{}>\n", s, self.name)
@@ -158,7 +137,7 @@ impl std::fmt::Display for Document {
         let mut s = "".to_string();
 
         for n in &self.nodes {
-            s = format!("{} {}", s, n);
+            s = format!("{}{}", s, n);
         }
 
         write!(f, "{}", s)

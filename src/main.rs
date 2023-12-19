@@ -8,7 +8,7 @@ use std::fs::File;
 use clap::Parser;
 use lazy_reader::LazyReader;
 use lexer::Lexer;
-use crate::parser::Document;
+use crate::parser::Node;
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about)]
@@ -29,12 +29,27 @@ fn main() {
     };
     let lr = LazyReader::new(Box::new(file), 32);
     let Some(mut p) = parser::Parser::new(Lexer::new(lr).parse().as_slice()) else { panic!("todo") };
-    println!("{}", p.parse());
-    println!("{:?}", Query::from(&args.query));
+
+    println!("{}", &args.query);
+    search(&p.parse().nodes, &Query::from(&args.query).path, 0)
 }
 
 
-fn search(d: Document, q: Query) {}
+fn search(nodes: &[Node], path: &[QueryItem], depth: usize) {
+    for n in nodes {
+        if depth < path.len() {
+            if n.name != path[depth].title {
+                continue;
+            }
+            search(&n.nodes, &path, depth + 1);
+        }
+        if depth == path.len() - 1 {
+            if let Some(t) = &n.text {
+                println!("{t}");
+            }
+        }
+    }
+}
 
 impl Query {
     fn from(q: &str) -> Self {

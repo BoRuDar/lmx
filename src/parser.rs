@@ -3,15 +3,15 @@ use std::fmt::{Formatter};
 use crate::lexer::Token;
 
 pub struct Document {
-    nodes: Vec<Node>,
+    pub nodes: Vec<Node>,
 }
 
 #[derive(Default)]
 pub struct Node {
-    name: String,
-    attr: Vec<Attr>,
-    nodes: Vec<Node>,
-    text: Option<String>,
+    pub name: String,
+    pub attr: Vec<Attr>,
+    pub text: Option<String>,
+    pub nodes: Vec<Node>,
 }
 
 #[allow(dead_code)]
@@ -140,6 +140,10 @@ impl std::fmt::Display for Node {
         }
 
         s = format!("{}>", s);
+
+        if let Some(text) = &self.text {
+            s = format!("{}{}", s, text);
+        }
 
         for n in &self.nodes {
             s = format!("{}\n{}", s, n);

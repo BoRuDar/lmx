@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
+use std::fmt::{Formatter};
 use crate::lexer::Token;
 
-#[derive(Debug)]
 pub struct Document {
     nodes: Vec<Node>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Node {
     name: String,
     attr: Vec<Attr>,
@@ -15,7 +15,6 @@ pub struct Node {
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
 pub struct Attr {
     key: String,
     val: String,
@@ -123,5 +122,41 @@ impl Parser {
         self.next();
 
         Some(Attr { key, val })
+    }
+}
+
+impl std::fmt::Display for Attr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}={}", self.key, self.val)
+    }
+}
+
+impl std::fmt::Display for Node {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = format!("<{}", self.name);
+
+        for a in &self.attr {
+            s = format!("{} {}=\"{}\"", s, a.key, a.val);
+        }
+
+        s = format!("{}>", s);
+
+        for n in &self.nodes {
+            s = format!("{}\n{}", s, n);
+        }
+
+        write!(f, "{}</{}>\n", s, self.name)
+    }
+}
+
+impl std::fmt::Display for Document {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = "".to_string();
+
+        for n in &self.nodes {
+            s = format!("{} {}", s, n);
+        }
+
+        write!(f, "{}", s)
     }
 }

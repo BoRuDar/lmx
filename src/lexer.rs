@@ -137,10 +137,9 @@ impl Lexer {
     }
 }
 
-
+#[cfg(test)]
 mod tests {
     use std::fs::File;
-    use std::io::Cursor;
     use crate::lazy_reader::LazyReader;
     use crate::lexer::Lexer;
 

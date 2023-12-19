@@ -1,7 +1,7 @@
 <root>
     <title name="Name" id="1"/>
     <chapters>
-        <chapter id="1" name="Chapter 3.14">Title1</chapter>
-        <chapter id="2">Title 2</chapter>
+        <chapter id="1" name="Chapter 3.14">Inner text 1</chapter>
+        <chapter id="2">Inner text 2</chapter>
     </chapters>
 </root>

@@ -14,25 +14,25 @@ struct QueryItem {
 
 impl Query {
     pub fn from(q: &str) -> Self {
-        let v: Vec<_> = q
-            .split(">")
-            .map(|n| {
-                if let Some((title, param)) = n.split_once(":") {
-                    if param.contains("text") {
-                        QueryItem { title: title.to_string(), text: true, attr_key: None }
+        Self {
+            path: q
+                .split(">")
+                .map(|n| {
+                    if let Some((title, param)) = n.split_once(":") {
+                        if param.contains("text") {
+                            QueryItem { title: title.to_string(), text: true, attr_key: None }
+                        } else {
+                            let attr_name = param.strip_prefix("attr[")
+                                .and_then(|a| a.strip_suffix("]"))
+                                .expect(&*format!("expected: 'attr[attr_name]' but got: {}", &param));
+                            QueryItem { title: title.to_string(), text: false, attr_key: Some(attr_name.to_string()) }
+                        }
                     } else {
-                        let attr_name = param.strip_prefix("attr[")
-                            .and_then(|a| a.strip_suffix("]"))
-                            .expect(&*format!("expected: 'attr[attr_name]' but got: {}", &param));
-                        QueryItem { title: title.to_string(), text: false, attr_key: Some(attr_name.to_string()) }
+                        QueryItem { title: n.to_string(), text: false, attr_key: None }
                     }
-                } else {
-                    QueryItem { title: n.to_string(), text: false, attr_key: None }
-                }
-            })
-            .collect();
-
-        Self { path: v }
+                })
+                .collect()
+        }
     }
 
     pub fn search(&self, nodes: &[Node], depth: usize) {
@@ -73,6 +73,7 @@ impl QueryItem {
                     return;
                 }
             }
+            return;
         }
 
         print!("{}", n);

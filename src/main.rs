@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_variables)]
-
 mod lazy_reader;
 mod lexer;
 mod parser;
@@ -37,7 +35,5 @@ fn main() {
         panic!("parser init failed")
     };
 
-    let doc = p.parse();
-
-    query::Query::from(&args.query).search(&doc.nodes, 0);
+    query::Query::from(&args.query).search(&p.parse().nodes, 0);
 }

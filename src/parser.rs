@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, fmt::Formatter};
+use std::collections::VecDeque;
 use crate::lexer::Token;
 use crate::parts::{Attr, Document, Node};
 
@@ -56,24 +56,23 @@ impl Parser {
                     self.move_to_next();
                     return Some(node);
                 }
+
                 Token::CloseNodeNamed(name) => {
-                    if node.name != name {
-                        panic!("open<{}> and close<{name}> blocks don't match", node.name);
-                    }
+                    if node.name != name { panic!("open<{}> and close<{name}> blocks don't match", node.name) }
                     self.move_to_next();
                     return Some(node);
                 }
+
                 Token::OpenNode(embedded_node_name) => {
                     if let Some(n) = self.parse_node(embedded_node_name) {
                         node.nodes.push(n);
                     }
                 }
-                Token::EndOfOpenNode => {
-                    self.move_to_next();
-                }
+
+                Token::EndOfOpenNode => { self.move_to_next(); }
+
                 Token::String(inner_text) => {
-                    let mut tmp_str = Vec::new();
-                    tmp_str.push(inner_text);
+                    let mut tmp_str = vec![inner_text];
                     self.move_to_next();
 
                     while let Token::String(s) = self.cur_tok.to_owned() {
@@ -82,9 +81,7 @@ impl Parser {
                     }
                     node.text = Some(tmp_str.join(" "));
                 }
-                tt => {
-                    panic!("Unhandled case: {tt:?}");
-                }
+                t => panic!("unexpected token: {t:?}")
             }
         }
     }
@@ -100,46 +97,5 @@ impl Parser {
         self.move_to_next();
 
         Some(Attr { key, val })
-    }
-}
-
-impl std::fmt::Display for Attr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}={}", self.key, self.val)
-    }
-}
-
-impl std::fmt::Display for Node {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut s = format!("<{}", self.name);
-
-        for a in &self.attr {
-            s = format!("{} {}=\"{}\"", s, a.key, a.val);
-        }
-
-        s = format!("{}>", s);
-
-        if let Some(text) = &self.text {
-            s = format!("{}{}", s, text);
-        } else {
-            s = format!("{}\n", s);
-            for n in &self.nodes {
-                s = format!("{}{}", s, n);
-            }
-        }
-
-        write!(f, "{}</{}>\n", s, self.name)
-    }
-}
-
-impl std::fmt::Display for Document {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut s = "".to_string();
-
-        for n in &self.nodes {
-            s = format!("{}{}", s, n);
-        }
-
-        write!(f, "{}", s)
     }
 }

@@ -7,10 +7,7 @@ pub struct LazyReader {
 
 impl LazyReader {
     pub fn new(source: Box<impl Read + 'static>, size: usize) -> Self <> {
-        Self {
-            source,
-            buf: Box::new((0..size).into_iter().map(|_| 0).collect()),
-        }
+        Self { source, buf: Box::new(vec![0; size]) }
     }
 
     pub fn next_chunk(&mut self) -> Option<Vec<u8>> {
@@ -22,10 +19,11 @@ impl LazyReader {
         }
     }
 
+    /// Read up to 'size' bytes into internal buffer.
     fn read(&mut self) -> Option<usize> {
         match self.source.read(self.buf.as_mut_slice()) {
             Ok(n) => { Some(n) }
-            Err(e) => panic!("Read failed: {}", e)
+            Err(e) => panic!("read failed: {}", e)
         }
     }
 }
